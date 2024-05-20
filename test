@@ -1,0 +1,75 @@
+class FTPClient {
+    [string] $ftpServer
+    [string] $username
+    [string] $password
+
+    # Constructor
+
+
+    FTPClient([string] $ftpServer, [string] $username, [string] $password) {
+        $this.ftpServer = $ftpServer
+        $this.username = $username
+        $this.password = $password
+    }
+
+    # Method to upload a file
+    [void] UploadFile([string] $localFile, [string] $remoteFile) {
+        $webclient = New-Object System.Net.WebClient
+        $webclient.Credentials = New-Object System.Net.NetworkCredential($this.username, $this.password)
+        $remoteUri = "$($this.ftpServer)/$remoteFile"
+        $webclient.UploadFile($remoteUri, "STOR", $localFile)
+        $webclient.Dispose()
+        Write-Output "Uploaded $localFile to $remoteUri"
+    }
+
+    # Method to download a file
+    [void] DownloadFile([string] $remoteFile, [string] $localFile) {
+        $webclient = New-Object System.Net.WebClient
+        $webclient.Credentials = New-Object System.Net.NetworkCredential($this.username, $this.password)
+        $remoteUri = "$($this.ftpServer)/$remoteFile"
+        $webclient.DownloadFile($remoteUri, $localFile)
+        $webclient.Dispose()
+        Write-Output "Downloaded $remoteFile to $localFile"
+    }
+
+    # Method to delete a file
+    [void] DeleteFile([string] $remoteFile) {
+        $remoteUri = "$($this.ftpServer)/$remoteFile"
+        $ftpWebRequest = [System.Net.FtpWebRequest]::Create($remoteUri)
+        $ftpWebRequest.Method = [System.Net.WebRequestMethods+Ftp]::DeleteFile
+        $ftpWebRequest.Credentials = New-Object System.Net.NetworkCredential($this.username, $this.password)
+        $response = $ftpWebRequest.GetResponse()
+        $response.Close()
+        Write-Output "Deleted $remoteUri"
+    }
+
+    # Method to list files in a directory
+    [void] ListDirectory([string] $remoteDir) {
+        $remoteUri = "$($this.ftpServer)/$remoteDir"
+        $ftpWebRequest = [System.Net.FtpWebRequest]::Create($remoteUri)
+        $ftpWebRequest.Method = [System.Net.WebRequestMethods+Ftp]::ListDirectory
+        $ftpWebRequest.Credentials = New-Object System.Net.NetworkCredential($this.username, $this.password)
+        $response = $ftpWebRequest.GetResponse()
+        $responseStream = $response.GetResponseStream()
+        $reader = New-Object System.IO.StreamReader($responseStream)
+        $directoryList = $reader.ReadToEnd()
+        Write-Output $directoryList
+        $reader.Close()
+        $response.Close()
+    }
+}
+
+# Example usage
+$ftpClient = [FTPClient]::new("ftp://ftp.example.com", "your_username", "your_password")
+
+# Upload a file
+$ftpClient.UploadFile("C:\path\to\your\file.txt", "file.txt")
+
+# Download a file
+$ftpClient.DownloadFile("file.txt", "C:\path\to\your\downloaded_file.txt")
+
+# Delete a file
+$ftpClient.DeleteFile("file.txt")
+
+# List directory contents
+$ftpClient.ListDirectory("/")
